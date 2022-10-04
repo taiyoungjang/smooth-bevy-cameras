@@ -21,10 +21,10 @@ pub struct LookTransformBundle {
 
 /// An eye and the target it's looking at. As a component, this can be modified in place of bevy's `Transform`, and the two will
 /// stay in sync.
-#[derive(Clone, Component, Copy, Debug)]
+#[derive(Clone, Component, Copy, Debug, Resource)]
 pub struct LookTransform {
-    pub eye: Vec3,
-    pub target: Vec3,
+    pub eye: DVec3,
+    pub target: DVec3,
 }
 
 impl From<LookTransform> for Transform {
@@ -34,37 +34,37 @@ impl From<LookTransform> for Transform {
 }
 
 impl LookTransform {
-    pub fn new(eye: Vec3, target: Vec3) -> Self {
+    pub fn new(eye: DVec3, target: DVec3) -> Self {
         Self { eye, target }
     }
 
-    pub fn radius(&self) -> f32 {
+    pub fn radius(&self) -> f64 {
         (self.target - self.eye).length()
     }
 
-    pub fn look_direction(&self) -> Option<Vec3> {
+    pub fn look_direction(&self) -> Option<DVec3> {
         (self.target - self.eye).try_normalize()
     }
 }
 
-fn eye_look_at_target_transform(eye: Vec3, target: Vec3) -> Transform {
+fn eye_look_at_target_transform(eye: DVec3, target: DVec3) -> Transform {
     // If eye and target are very close, we avoid imprecision issues by keeping the look vector a unit vector.
     let look_vector = (target - eye).normalize();
     let look_at = eye + look_vector;
 
-    Transform::from_translation(eye).looking_at(look_at, Vec3::Y)
+    Transform::from_translation(eye).looking_at(look_at, DVec3::Y)
 }
 
 /// Preforms exponential smoothing on a `LookTransform`. Set the `lag_weight` between `0.0` and `1.0`, where higher is smoother.
 #[derive(Component)]
 pub struct Smoother {
-    lag_weight: f32,
+    lag_weight: f64,
     lerp_tfm: Option<LookTransform>,
     enabled: bool,
 }
 
 impl Smoother {
-    pub fn new(lag_weight: f32) -> Self {
+    pub fn new(lag_weight: f64) -> Self {
         Self {
             lag_weight,
             lerp_tfm: None,
@@ -81,7 +81,7 @@ impl Smoother {
         }
     }
 
-    pub fn set_lag_weight(&mut self, lag_weight: f32) {
+    pub fn set_lag_weight(&mut self, lag_weight: f64) {
         self.lag_weight = lag_weight;
     }
 

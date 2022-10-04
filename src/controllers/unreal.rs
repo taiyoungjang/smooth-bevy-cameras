@@ -10,6 +10,7 @@ use bevy::{
     math::prelude::*,
     transform::components::Transform,
 };
+use bevy::math::DVec2;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default)]
@@ -40,15 +41,15 @@ impl Plugin for UnrealCameraPlugin {
 #[derive(Bundle)]
 pub struct UnrealCameraBundle {
     controller: UnrealCameraController,
-    #[bundle]
+    //#[bundle]
     look_transform: LookTransformBundle,
     transform: Transform,
 }
 
 impl UnrealCameraBundle {
-    pub fn new(controller: UnrealCameraController, eye: Vec3, target: Vec3) -> Self {
+    pub fn new(controller: UnrealCameraController, eye: DVec3, target: DVec3) -> Self {
         // Make sure the transform is consistent with the controller to start.
-        let transform = Transform::from_translation(eye).looking_at(target, Vec3::Y);
+        let transform = Transform::from_translation(eye).looking_at(target, DVec3::Y);
 
         Self {
             controller,
@@ -68,31 +69,31 @@ pub struct UnrealCameraController {
     pub enabled: bool,
 
     /// How many radians per frame for each rotation axis (yaw, pitch) when rotating with the mouse
-    pub rotate_sensitivity: Vec2,
+    pub rotate_sensitivity: DVec2,
 
     /// How many units per frame for each direction when translating using Middle or L+R panning
-    pub mouse_translate_sensitivity: Vec2,
+    pub mouse_translate_sensitivity: DVec2,
 
     /// How many units per frame when translating using scroll wheel
-    pub wheel_translate_sensitivity: f32,
+    pub wheel_translate_sensitivity: f64,
 
     /// How many units per frame when translating using W/S/Q/E
     /// Updated with scroll wheel while dragging with any mouse button
-    pub keyboard_mvmt_sensitivity: f32,
+    pub keyboard_mvmt_sensitivity: f64,
 
     /// Wheel sensitivity for modulating keyboard movement speed
-    pub keyboard_mvmt_wheel_sensitivity: f32,
+    pub keyboard_mvmt_wheel_sensitivity: f64,
 
     /// The greater, the slower to follow input
-    pub smoothing_weight: f32,
+    pub smoothing_weight: f64,
 }
 
 impl Default for UnrealCameraController {
     fn default() -> Self {
         Self {
             enabled: true,
-            rotate_sensitivity: Vec2::splat(0.002),
-            mouse_translate_sensitivity: Vec2::splat(0.02),
+            rotate_sensitivity: DVec2::splat(0.002),
+            mouse_translate_sensitivity: DVec2::splat(0.02),
             wheel_translate_sensitivity: 1.0,
             keyboard_mvmt_sensitivity: 0.1,
             keyboard_mvmt_wheel_sensitivity: 0.1,
@@ -102,9 +103,9 @@ impl Default for UnrealCameraController {
 }
 
 pub enum ControlEvent {
-    Locomotion(Vec2),
-    Rotate(Vec2),
-    TranslateEye(Vec2),
+    Locomotion(DVec2),
+    Rotate(DVec2),
+    TranslateEye(DVec2),
 }
 
 define_on_controller_enabled_changed!(UnrealCameraController);
@@ -136,18 +137,18 @@ pub fn default_input_map(
     let right_pressed = mouse_buttons.pressed(MouseButton::Right);
     let middle_pressed = mouse_buttons.pressed(MouseButton::Middle);
 
-    let mut cursor_delta = Vec2::ZERO;
+    let mut cursor_delta = DVec2::ZERO;
     for event in mouse_motion_events.iter() {
-        cursor_delta += event.delta;
+        cursor_delta += DVec2::new(event.delta.x as f64, event.delta.y as f64);
     }
 
-    let mut wheel_delta = 0.0;
+    let mut wheel_delta = 0.0f64;
     for event in mouse_wheel_reader.iter() {
-        wheel_delta += event.x + event.y;
+        wheel_delta += event.x as f64 + event.y as f64;
     }
 
-    let mut panning_dir = Vec2::ZERO;
-    let mut translation_dir = Vec2::ZERO; // y is forward/backward axis, x is rotation around Z
+    let mut panning_dir = DVec2::ZERO;
+    let mut translation_dir = DVec2::ZERO; // y is forward/backward axis, x is rotation around Z
 
     for key in keyboard.get_pressed() {
         match key {
@@ -179,8 +180,8 @@ pub fn default_input_map(
         }
     }
 
-    let mut panning = Vec2::ZERO;
-    let mut locomotion = Vec2::ZERO;
+    let mut panning = DVec2::ZERO;
+    let mut locomotion = DVec2::ZERO;
 
     // If any of the mouse button are pressed; read additional signals from the keyboard for panning
     // and locomotion along camera view axis
@@ -256,11 +257,11 @@ pub fn control_system(
                 look_angles.add_pitch(-delta.y);
             }
             ControlEvent::TranslateEye(delta) => {
-                let yaw_rot = Quat::from_axis_angle(Vec3::Y, look_angles.get_yaw());
-                let rot_x = yaw_rot * Vec3::X;
+                let yaw_rot = DQuat::from_axis_angle(DVec3::Y, look_angles.get_yaw());
+                let rot_x = yaw_rot * DVec3::X;
 
                 // Translates up/down (Y) and left/right (X).
-                transform.eye -= delta.x * rot_x - Vec3::new(0.0, delta.y, 0.0);
+                transform.eye -= delta.x * rot_x - DVec3::new(0.0, delta.y, 0.0);
             }
         }
     }

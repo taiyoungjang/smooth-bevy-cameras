@@ -41,7 +41,7 @@ impl Plugin for OrbitCameraPlugin {
 #[derive(Bundle)]
 pub struct OrbitCameraBundle {
     controller: OrbitCameraController,
-    #[bundle]
+    //#[bundle]
     look_transform: LookTransformBundle,
     transform: Transform,
 }
@@ -49,11 +49,11 @@ pub struct OrbitCameraBundle {
 impl OrbitCameraBundle {
     pub fn new(
         controller: OrbitCameraController,
-        eye: Vec3,
-        target: Vec3,
+        eye: DVec3,
+        target: DVec3,
     ) -> Self {
         // Make sure the transform is consistent with the controller to start.
-        let transform = Transform::from_translation(eye).looking_at(target, Vec3::Y);
+        let transform = Transform::from_translation(eye).looking_at(target, DVec3::Y);
 
         Self {
             controller,
@@ -70,18 +70,18 @@ impl OrbitCameraBundle {
 #[derive(Clone, Component, Copy, Debug, Deserialize, Serialize)]
 pub struct OrbitCameraController {
     pub enabled: bool,
-    pub mouse_rotate_sensitivity: Vec2,
-    pub mouse_translate_sensitivity: Vec2,
-    pub mouse_wheel_zoom_sensitivity: f32,
+    pub mouse_rotate_sensitivity: DVec2,
+    pub mouse_translate_sensitivity: DVec2,
+    pub mouse_wheel_zoom_sensitivity: f64,
     pub pixels_per_line: f32,
-    pub smoothing_weight: f32,
+    pub smoothing_weight: f64,
 }
 
 impl Default for OrbitCameraController {
     fn default() -> Self {
         Self {
-            mouse_rotate_sensitivity: Vec2::splat(0.006),
-            mouse_translate_sensitivity: Vec2::splat(0.008),
+            mouse_rotate_sensitivity: DVec2::splat(0.006),
+            mouse_translate_sensitivity: DVec2::splat(0.008),
             mouse_wheel_zoom_sensitivity: 0.15,
             smoothing_weight: 0.8,
             enabled: true,
@@ -91,9 +91,9 @@ impl Default for OrbitCameraController {
 }
 
 pub enum ControlEvent {
-    Orbit(Vec2),
-    TranslateTarget(Vec2),
-    Zoom(f32),
+    Orbit(DVec2),
+    TranslateTarget(DVec2),
+    Zoom(f64),
 }
 
 define_on_controller_enabled_changed!(OrbitCameraController);
@@ -122,9 +122,9 @@ pub fn default_input_map(
         ..
     } = *controller;
 
-    let mut cursor_delta = Vec2::ZERO;
+    let mut cursor_delta = DVec2::ZERO;
     for event in mouse_motion_events.iter() {
-        cursor_delta += event.delta;
+        cursor_delta += DVec2::new(event.delta.x as f64, event.delta.y as f64);
     }
 
     if keyboard.pressed(KeyCode::LControl) {
@@ -141,8 +141,8 @@ pub fn default_input_map(
     for event in mouse_wheel_reader.iter() {
         // scale the event magnitude per pixel or per line
         let scroll_amount = match event.unit {
-            MouseScrollUnit::Line => event.y,
-            MouseScrollUnit::Pixel => event.y / pixels_per_line,
+            MouseScrollUnit::Line => event.y as f64,
+            MouseScrollUnit::Pixel => event.y as f64 / pixels_per_line as f64,
         };
         scalar *= 1.0 - scroll_amount * mouse_wheel_zoom_sensitivity;
     }
@@ -173,8 +173,8 @@ pub fn control_system(
                     look_angles.add_pitch(delta.y);
                 }
                 ControlEvent::TranslateTarget(delta) => {
-                    let right_dir = scene_transform.rotation * -Vec3::X;
-                    let up_dir = scene_transform.rotation * Vec3::Y;
+                    let right_dir = scene_transform.rotation * -DVec3::X;
+                    let up_dir = scene_transform.rotation * DVec3::Y;
                     transform.target += delta.x * right_dir + delta.y * up_dir;
                 }
                 ControlEvent::Zoom(scalar) => {
